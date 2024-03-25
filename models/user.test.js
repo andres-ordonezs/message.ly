@@ -3,6 +3,9 @@
 const db = require("../db");
 const User = require("./user");
 const Message = require("./message");
+const bcrypt = require("bcrypt");
+
+const { SECRET_KEY, BCRYPT_WORK_FACTOR } = require("../config");
 
 
 describe("Test User class", function () {
