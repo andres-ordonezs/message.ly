@@ -72,17 +72,22 @@ router.post('/', async function (req, res, next) {
 
 router.post('/:id/read', async function (req, res, next) {
 
+  let readMsg;
+
   const id = req.params.id;
 
   const user = res.locals.user;
 
-  if (user.username === message.to_user) {
-    const message = Message.markRead(id);
-    return message;
+  const message = Message.get(id);
+
+  if (user.username === message.to_user.username) {
+    readMsg = Message.markRead(id);
+
+  } else {
+    return new BadRequestError('User is not recepient');
   }
 
-  return new BadRequestError('User is not recepient');
-
+  return readMsg;
 });
 
 
