@@ -15,7 +15,7 @@ router.post('/login', async function (req, res, next) {
 
   const { username, password } = req.body;
 
-  if (await User.authenticate === true) {
+  if (await User.authenticate(username, password) === true) {
     const token = jwt.sign({ username, password }, SECRET_KEY);
     return res.json({ token });
   }
@@ -28,5 +28,29 @@ router.post('/login', async function (req, res, next) {
  *
  * {username, password, first_name, last_name, phone} => {token}.
  */
+
+router.post('/register', async function (req, res, next) {
+  if (req.body === undefined) throw new BadRequestError();
+
+  const {
+    username,
+    password,
+    first_name,
+    last_name,
+    phone } = req.body;
+
+  const newUser = await User.register({
+    username: username,
+    password: password,
+    first_name: first_name,
+    last_name: last_name,
+    phone: phone })
+
+  console.log(newUser);
+
+  const token = jwt.sign({ ...newUser }, SECRET_KEY);
+  return res.json({ token });
+})
+
 
 module.exports = router;
