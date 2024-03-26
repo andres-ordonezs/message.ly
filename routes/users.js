@@ -2,7 +2,8 @@
 
 const db = require("../db");
 const { NotFoundError } = require("../expressError");
-const { User } = require("../models/user");
+const { ensureLoggedIn, ensureCorrectUser } = require("../middleware/auth");
+const User = require("../models/user");
 
 const Router = require("express").Router;
 const router = new Router();
@@ -14,10 +15,11 @@ const router = new Router();
  *
  **/
 
-router.get('/', async function (req, res, next) {
+router.get('/', ensureLoggedIn, async function (req, res, next) {
+
   const users = await User.all();
   return res.json(users);
-})
+});
 
 
 /** GET /:username - get detail of users.
@@ -26,12 +28,18 @@ router.get('/', async function (req, res, next) {
  *
  **/
 
-router.get('/:username', async function (req, res, next) {
-  const user = await User.get(username);
+router.get(
+  '/:username',
+  ensureCorrectUser,
+  async function (req, res, next) {
 
-  if (!user) throw new NotFoundError(`${username} not found!`)
-  return user;
-})
+  const username = req.params.username;
+  const user = await User.get(username); // returns user
+
+  // TODO: this error is already thrown in the model
+  if (!user) throw new NotFoundError(`${username} not found!`);
+  return res.json(user);
+});
 
 
 /** GET /:username/to - get messages to user
@@ -44,12 +52,17 @@ router.get('/:username', async function (req, res, next) {
  *
  **/
 
+// TODO: move the middleware to view functions
 router.get('/:username/to', async function (req, res, next) {
+  const username = req.params.username;
+  ensureCorrectUser;
+
   const messages = await User.messagesTo(username);
 
-  if (!messages) throw new NotFoundError(`${username} not found!`)
-  return messages;
-})
+  // TODO: this error is already thrown in the model
+  if (!messages) throw new NotFoundError(`${username} not found!`);
+  return res.json(messages);
+});
 
 
 /** GET /:username/from - get messages from user
@@ -63,10 +76,14 @@ router.get('/:username/to', async function (req, res, next) {
  **/
 
 router.get('/:username/from', async function (req, res, next) {
+  const username = req.params.username;
+  ensureCorrectUser;
+
   const messages = await User.messagesFrom(username);
 
-  if (!messages) throw new NotFoundError(`${username} not found!`)
-  return messages;
-})
+  // TODO: this error is already thrown in the model
+  if (!messages) throw new NotFoundError(`${username} not found!`);
+  return res.json(messages);
+});
 
 module.exports = router;

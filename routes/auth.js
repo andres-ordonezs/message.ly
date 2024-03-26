@@ -2,21 +2,24 @@
 
 const jwt = require("jsonwebtoken");
 
-const { User } = require("../models/user");
-const { BadRequestError } = require("../expressError");
+const User = require("../models/user");
+const { BadRequestError, UnauthorizedError } = require("../expressError");
 const { SECRET_KEY } = require("../config");
 
 const Router = require("express").Router;
 const router = new Router();
 
+
 /** POST /login: {username, password} => {token} */
+
 router.post('/login', async function (req, res, next) {
   if (req.body === undefined) throw new BadRequestError();
 
   const { username, password } = req.body;
 
   if (await User.authenticate(username, password) === true) {
-    const token = jwt.sign({ username, password }, SECRET_KEY);
+      // TODO: update login time stamp to login
+    const token = jwt.sign({ username }, SECRET_KEY);
     return res.json({ token });
   }
   throw new UnauthorizedError("Invalid user/password");
@@ -32,25 +35,12 @@ router.post('/login', async function (req, res, next) {
 router.post('/register', async function (req, res, next) {
   if (req.body === undefined) throw new BadRequestError();
 
-  const {
-    username,
-    password,
-    first_name,
-    last_name,
-    phone } = req.body;
+  const { username } = await User.register(req.body);
+  console.log("username: ", username);
 
-  const newUser = await User.register({
-    username: username,
-    password: password,
-    first_name: first_name,
-    last_name: last_name,
-    phone: phone })
-
-  console.log(newUser);
-
-  const token = jwt.sign({ ...newUser }, SECRET_KEY);
+  const token = jwt.sign({ username }, SECRET_KEY);
   return res.json({ token });
-})
+});
 
 
 module.exports = router;

@@ -2,6 +2,7 @@
 
 const { BadRequestError, UnauthorizedError } = require("../expressError");
 const Message = require("../models/message");
+const { ensureCorrectUser, ensureLoggedIn } = require("../middleware/auth");
 
 const Router = require("express").Router;
 const router = new Router();
@@ -19,22 +20,19 @@ const router = new Router();
  *
  **/
 
-router.get('/:id', async function (req, res, next) {
+router.get('/:id', ensureLoggedIn, async function (req, res, next) {
 
-  const id = req.params.id;
-
-  const message = await Message.get(Number(id));
-
+  const id = Number(req.params.id);
   const user = res.locals.user;
+  const message = await Message.get(id);
 
-  if (user.username !== message.to_user.username ||
+  if (user.username !== message.to_user.username &&
     user.username !== message.from_user.username) {
-    return new UnauthorizedError('User is not a From or a To user');
+    throw new UnauthorizedError('User is not a From or a To user');
   }
 
-  return res.json({ message: message });
 
-  // console.log("*********payload: ", res.locals.payload);
+  return res.json(message);
 
 });
 
@@ -45,19 +43,17 @@ router.get('/:id', async function (req, res, next) {
  *   {message: {id, from_username, to_username, body, sent_at}}
  *
  **/
-router.post('/', async function (req, res, next) {
 
+router.post('/', ensureLoggedIn, async function (req, res, next) {
   const from_username = res.locals.user.username;
 
-  const newMessage = Message.create(
-    from_username,
-    req.body.to_username,
-    req.body.body
-  );
+  const newMessage = await Message.create({
+    from_username: from_username,
+    to_username: req.body.to_username,
+    body: req.body.body
+  });
 
-  return res.json(newMessage);
-
-
+  return res.json({ message:newMessage });
 });
 
 
@@ -70,24 +66,19 @@ router.post('/', async function (req, res, next) {
  *
  **/
 
-router.post('/:id/read', async function (req, res, next) {
-
-  let readMsg;
+router.post('/:id/read', ensureLoggedIn, async function (req, res, next) {
 
   const id = req.params.id;
-
   const user = res.locals.user;
-
-  const message = Message.get(id);
+  const message = await Message.get(id);
 
   if (user.username === message.to_user.username) {
-    readMsg = Message.markRead(id);
-
+    const readMsg = await Message.markRead(id);
+    return readMsg;
   } else {
-    return new BadRequestError('User is not recepient');
+    throw new BadRequestError('User is not recepient');
   }
 
-  return readMsg;
 });
 
 
